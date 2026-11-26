@@ -11,6 +11,9 @@ import {
   ReceiptText,
   Send,
   Star,
+  CircleDot,
+  Pause,
+  Play,
   TrendingUp,
   Users
 } from "lucide-react";
@@ -235,6 +238,29 @@ function CampaignFunnelAnchor({ stats }) {
       </div>
     </div>
   );
+}
+function LiveActivityFeed(){ 
+  const[events,setEvents] = useState([]);
+  const[connected, setConnected] = useState(false);
+  const [paused, setPaused] = useState(false);
+  useEffect(() => { 
+    const source = new EventScource("https://localhost:8000/live");
+    source.onopen = () => setConnected(true);
+    source.onmessage=(message)=> { 
+      const event = JSON.parse(message.data);
+      setEvents((previous)=> [ 
+        event,
+        ...previous
+      
+      ].slice(0,50));
+    };
+    source.onerror = () => setConnected(false);
+
+    return () => { 
+      source.close();
+    };
+  },[]);
+
 }
 
 function DashboardPage() {
@@ -562,6 +588,7 @@ function DashboardPage() {
         </div>
 
         <div className="grid gap-5 xl:col-span-5">
+        <LiveActivityFeed/>
           <SectionCard title="Top customers" icon={PackageCheck} delay={300}>
             {customersLoading ? <LoadingSkeleton rows={5} /> : customersError ? <ErrorState message={customersError} onRetry={refetchCustomers} /> : topCustomers.length ? (
               <div className="space-y-2">

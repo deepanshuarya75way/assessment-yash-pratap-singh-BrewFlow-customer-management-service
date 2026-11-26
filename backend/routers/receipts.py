@@ -1,7 +1,9 @@
 from fastapi import APIRouter, HTTPException
+from fastapi.response import StreamingResponse
 
 from core.database import get_connection, release_connection
 from schemas import CommunicationReceipt
+from services.live_events import publish_event
 
 router = APIRouter(tags=["receipts"])
 
@@ -34,6 +36,27 @@ async def receive_receipt(payload: CommunicationReceipt):
         else:
             raise HTTPException(status_code=400, detail="Invalid status")
 
+        await publish_event({ 
+            "type":status,
+            "campaign_id": payload.campaign_id,
+            "customer_id": payload.customer_id,
+            "timestamp": None
+        })
+
         return {"success": True, "campaign_id": payload.campaign_id, "customer_id": payload.customer_id, "status": status}
     finally:
         await release_connection(conn)
+@router.get("/live") 
+async def live_activity():
+    async def event_stream():
+        async for event in subscribe(): 
+            yeild format_sse(event) 
+
+    return StreamingResponse( 
+        event_stream(),
+        media_type='text/event-stream',
+        headers={ 
+            "Cache-Control": "no-cache",
+            "Connection": "Keep=alive"
+        }
+    )
